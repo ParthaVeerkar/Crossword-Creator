@@ -47,35 +47,22 @@ class MainHandler(webapp2.RequestHandler):
         </tr>
         '''
 
-        table = []        # contains list of (x, y, letter)
+        table = []        # contains 2D array of the puzzle
         word_counter = 1  # current word being searched/appended
         hints = []        # contains list of (word's index in words[], x, y, across/down). Used to remember where a word starts
 
         # Adding the first word
         hints.append([1,0,0,0])        #  [word count, x, y, across/down]
 
-        for i in range(0, len(words[word_counter])):
-            table.append([i,0,words[word_counter][i]])
 
-        word_counter+=1
-        flag = 0
-        for i in range(0,len(words)):
-            for j in range(0,len(words[word_counter])):
-                if words[i].count(words[word_counter][j])>0:
-                    flag = 1
-                    break
-                    index_of_old_word = words[i].index(words[word_counter][j])
-                    index_of_new_word = j
-                    matched_word_counter = i
-                    # match found. Check for placement of word
-
-        if flag==1:
-            self.response.out.write("FOUNDDD")
-            self.response.out.write(words[i].index(words[word_counter][j]))
+        table = insertLetter(table, 0, 0, 0, words[1])
 
         self.response.out.write(words[word_counter])
         self.response.out.write('|')
         self.response.out.write(words[i])
+        self.response.out.write('|')
+        self.response.out.write(table)
+        self.response.out.write(createHtmlTable(table))
 
         htmlString = htmlString + '''</table><script type="text/javascript" src="static/index.js"></script></body></html>'''
 
@@ -87,6 +74,75 @@ class MainHandler(webapp2.RequestHandler):
         '''
         #       self.response.out.write(htmlString)
 
+
 app = webapp2.WSGIApplication([('/', MainHandler)],
                               debug=True
 )
+
+
+#
+#  Adds a word to the crossword assuming that letter
+#  overlaps have already been checked
+#
+
+def insertLetter(table, x, y, vert, word):
+
+    # Adding horizontal word
+    if vert == 0:
+
+        #column not created
+        if len(table) < x+len(word):
+
+            # creating empty coulmns
+            reqd = len(word)
+            for i in range(0,len(word)):
+                table.append([])
+
+
+        # appending letters to the table
+        for i in range(0,len(word)):
+            table[x+i].append([y, word[i]])
+
+    # Adding vertical word
+    else:
+        # appending letters to the table
+        for i in range(0,len(word)):
+            table[x].append([y-1, word[i]])
+
+    return table
+
+
+def createHtmlTable(table):
+
+    # finding number of rows
+    max = 0
+    for i in range(0, len(table)-1):
+        for j in range(0,len(table[i])-1):
+            if table[i][j][0] > max:
+                max = table[i][j][0]
+
+
+    # Adding black blocks
+    html_table = []
+    for x in range(0, len(table)-1):
+        html_table.append([])
+        for y in range(0,max):
+            html_table[x].append('<td class="tabdata" style="background:black;"></td>')
+
+    # Adding white blocks
+    for x in range(0, len(table)-1):
+        temp_len = len(table[x])-1
+        for y in range(0,temp_len):
+            html_table[x][max - table[x][y][0]] = '<td class="tabdata"><input type="text" class="text" maxlength="1" tabindex="1" /></td>'
+
+    # creating html string
+    html_string = '<table id="tab">'
+
+    for x in range(0, len(table)-1):
+        html_string = html_string + '<tr>'
+        for y in range(0,max):
+            html_string = html_string + html_table[x][y]
+        html_string = html_string + '</tr>'
+    html_string = html_string + '</table>'
+
+    return html_string
